@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { SectionList, ViewToken } from 'react-native'
-import { Hotspot, Sum, Validator } from '@helium/http'
+import { Hotspot, Validator } from '@helium/http'
 import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
 import Search from '@assets/images/search.svg'
@@ -31,6 +31,7 @@ import { fetchValidatorRewards } from '../../../store/validators/validatorsSlice
 import { useAppDispatch } from '../../../store/store'
 import { isValidator } from '../../../utils/validatorUtils'
 import { fetchRewards } from '../../../store/hotspots/hotspotsSlice'
+import { AccountReward } from '../../../store/account/accountSlice'
 
 const REWARDS_BATCH_SIZE = 10
 const HotspotsList = ({
@@ -44,7 +45,7 @@ const HotspotsList = ({
   visible: boolean
   searchPressed?: () => void
   addHotspotPressed?: () => void
-  accountRewards: CacheRecord<Sum>
+  accountRewards: CacheRecord<AccountReward>
 }) => {
   const { t } = useTranslation()
   const colors = useColors()
@@ -67,9 +68,11 @@ const HotspotsList = ({
     rewards: validatorRewards,
   } = useSelector((state: RootState) => state.validators)
 
-  const hotspots = useSelector((state: RootState) => state.hotspots.hotspots)
+  const hotspots = useSelector(
+    (state: RootState) => state.hotspots.hotspots.data,
+  )
   const followedHotspots = useSelector(
-    (state: RootState) => state.hotspots.followedHotspots,
+    (state: RootState) => state.hotspots.followedHotspots.data,
   )
   const validators = useSelector(
     (state: RootState) => state.validators.validators.data,
@@ -120,17 +123,16 @@ const HotspotsList = ({
     },
   })
 
-  useVisible({
-    onAppear: () => {
-      maybeGetLocation(false, locationDeniedHandler)
-    },
+  useMount(() => {
+    maybeGetLocation(false, locationDeniedHandler)
   })
 
   useAsync(async () => {
     if (
       !myValidatorsLoaded ||
       !followedValidatorsLoaded ||
-      loadingValidatorRewards
+      loadingValidatorRewards ||
+      !visible
     ) {
       return
     }
@@ -151,6 +153,7 @@ const HotspotsList = ({
     validators,
     followedValidators,
     loadingValidatorRewards,
+    visible,
   ])
 
   useEffect(() => {
@@ -287,17 +290,28 @@ const HotspotsList = ({
                 marginTop="xs"
                 marginBottom="xl"
                 letterSpacing={1}
+                maxFontSizeMultiplier={1.2}
               >
                 {t('hotspots.list.no_offline')}
               </Text>
-              <Text variant="body3Medium" color="grayDark" letterSpacing={1}>
+              <Text
+                variant="body3Medium"
+                color="grayDark"
+                letterSpacing={1}
+                maxFontSizeMultiplier={1.2}
+              >
                 {t('hotspots.list.online')}
               </Text>
             </Box>
           )}
         {!filterHasHotspots && (
           <Box paddingHorizontal="l">
-            <Text variant="body1" color="grayDark" padding="m">
+            <Text
+              variant="body1"
+              color="grayDark"
+              padding="m"
+              maxFontSizeMultiplier={1.2}
+            >
               {t('hotspots.list.no_results')}
             </Text>
           </Box>
@@ -364,6 +378,7 @@ const HotspotsList = ({
   )
 
   useEffect(() => {
+    if (!visible) return
     if (
       prevGatewaySortOrder !== gatewaySortOrder ||
       prevVisibleHotspots.length !== visibleHotspots.length
@@ -402,6 +417,7 @@ const HotspotsList = ({
     rewardsFetchIndex,
     gatewaySortOrder,
     prevGatewaySortOrder,
+    visible,
   ])
 
   const onViewableItemsChanged = useCallback(

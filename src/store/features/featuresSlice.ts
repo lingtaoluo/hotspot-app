@@ -8,6 +8,15 @@ export type FeaturesState = {
   tileServerPointsUrl?: string
   appRetryCount: number
   featuresLoaded: boolean
+  walletChartEnabled: boolean
+  proxyEnabled: boolean
+  fetchFeaturesFailed: boolean
+  checklistEnabled: boolean
+  discovery: {
+    enabled: boolean
+    message: string
+  }
+  ytdEarningsEnabled: boolean
 }
 
 const initialState: FeaturesState = {
@@ -17,8 +26,18 @@ const initialState: FeaturesState = {
     'https://helium-hotspots.s3.us-west-2.amazonaws.com/public.points.json',
   appRetryCount: 1,
   featuresLoaded: false,
+  walletChartEnabled: false,
+  proxyEnabled: false,
+  fetchFeaturesFailed: false,
+  checklistEnabled: false,
+  discovery: {
+    enabled: false,
+    message: '',
+  },
+  ytdEarningsEnabled: false,
 }
 
+// if this call fails we load the app with default settings and retry every 30 seconds
 export const fetchFeatures = createAsyncThunk<FeaturesState>(
   'features/get',
   async () => getWallet('features'),
@@ -30,13 +49,12 @@ const featuresSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
-    builder.addCase(fetchFeatures.pending, (state) => {
-      state.featuresLoaded = false
-    })
     builder.addCase(fetchFeatures.fulfilled, (state, { payload }) => {
       state.fleetModeLowerLimit = payload.fleetModeLowerLimit
       state.hotspotSyncBuffer = payload.hotspotSyncBuffer
-      state.appRetryCount = payload.appRetryCount
+      state.walletChartEnabled = payload.walletChartEnabled
+      state.proxyEnabled = payload.proxyEnabled
+      state.checklistEnabled = payload.checklistEnabled
       if (payload.tileServerRes8Url) {
         state.tileServerRes8Url = payload.tileServerRes8Url
       }
@@ -44,9 +62,13 @@ const featuresSlice = createSlice({
         state.tileServerPointsUrl = payload.tileServerPointsUrl
       }
       state.featuresLoaded = true
+      state.fetchFeaturesFailed = false
+      state.discovery = payload.discovery || initialState.discovery
+      state.ytdEarningsEnabled = payload.ytdEarningsEnabled
     })
     builder.addCase(fetchFeatures.rejected, (state) => {
-      state.featuresLoaded = false
+      state.featuresLoaded = true
+      state.fetchFeaturesFailed = true
     })
   },
 })
